@@ -251,6 +251,8 @@ enum MenuPanelRecoveryTests {
         func handbackWouldSwitchDesktop(to pid: pid_t) -> Bool { switchesDesktop }
         func closePopover() { popover.isShown = false }
         enum menuBarLog { static func log(_ message: String) {} }
+        var presentationLogFlushes = 0
+        func logPanelPresentation() { presentationLogFlushes += 1 }
         func beginPanelPresentationWatch(window: NSWindow, startedAt: TimeInterval,
                                          showDuration: TimeInterval) {}
         func configurePopoverWindow(_ window: NSWindow) {}
@@ -478,6 +480,7 @@ enum MenuPanelRecoveryTests {
             expect(host.popoverLastFrame == window.frame, "later movement refreshes the recovery frame")
             host.popoverCloseIsAppRequested = true; close(host)
             expect(NotificationCenter.default.observers.isEmpty, "normal close leaves no geometry observer")
+            expect(host.presentationLogFlushes == 1, "close flushes presentation diagnostics without waiting for the timer")
         }
         do {
             let host = setup(present: false)

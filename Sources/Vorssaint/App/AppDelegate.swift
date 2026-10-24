@@ -1127,23 +1127,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     // MARK: - Presentation timings
 
     /// The shape of one presentation: how long AppKit spent inside `show()`,
-    /// when the window first drew, and how far the content height moved after
-    /// it was up. The height is what AppKit re-lays out the whole panel for,
-    /// so a jump here is what an open feels like when it is not the first one.
+    /// the first observed window update, and subsequent height changes.
+    /// Observation starts after `show()` and initial layout; an update is not
+    /// a rendering-completion signal, and resizes during `show()` are excluded.
     private struct PanelPresentation {
         let serial: Int
         let startedAt: TimeInterval
         let showDuration: TimeInterval
         let openingHeight: CGFloat
         let switchingAnchor: Bool
-        var firstDraw: TimeInterval?
+        var firstUpdate: TimeInterval?
         var resizes = 0
         var finalHeight: CGFloat
     }
 
     private func beginPanelPresentationWatch(window: NSWindow, startedAt: TimeInterval,
                                              showDuration: TimeInterval) {
-        endPanelPresentationWatch()
+        logPanelPresentation()
         panelPresentationSerial &+= 1
         let serial = panelPresentationSerial
         panelPresentation = PanelPresentation(
@@ -1161,7 +1161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
                       var watch = self.panelPresentation, watch.serial == serial else { return }
                 let elapsed = ProcessInfo.processInfo.systemUptime - watch.startedAt
                 if notification.name == NSWindow.didUpdateNotification {
-                    if watch.firstDraw == nil { watch.firstDraw = elapsed }
+                    if watch.firstUpdate == nil { watch.firstUpdate = elapsed }
                 } else {
                     watch.resizes += 1
                     watch.finalHeight = window.frame.height
@@ -1178,8 +1178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
 
     private func logPanelPresentation() {
         guard let watch = panelPresentation else { return }
-        let firstDraw = watch.firstDraw.map { Self.milliseconds($0) } ?? "none"
-        Self.menuBarLog.log("panel open show=\(Self.milliseconds(watch.showDuration), privacy: .public) firstDraw=\(firstDraw, privacy: .public) height=\(Int(watch.openingHeight))->\(Int(watch.finalHeight)) resizes=\(watch.resizes) switching=\(watch.switchingAnchor)")
+        let firstUpdate = watch.firstUpdate.map { Self.milliseconds($0) } ?? "none"
+        Self.menuBarLog.log("panel open show=\(Self.milliseconds(watch.showDuration), privacy: .public) firstUpdate=\(firstUpdate, privacy: .public) postShowHeight=\(Int(watch.openingHeight))->\(Int(watch.finalHeight)) postShowResizes=\(watch.resizes) switching=\(watch.switchingAnchor)")
         endPanelPresentationWatch()
     }
 
@@ -1412,6 +1412,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     }
 
     func popoverDidClose(_ notification: Notification) {
+        logPanelPresentation()
         if !popover.isShown {
             MenuPanelFocus.shared.setPopoverVisible(false)
         }
