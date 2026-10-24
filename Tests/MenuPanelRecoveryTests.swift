@@ -250,6 +250,9 @@ enum MenuPanelRecoveryTests {
         var switchesDesktop = false
         func handbackWouldSwitchDesktop(to pid: pid_t) -> Bool { switchesDesktop }
         func closePopover() { popover.isShown = false }
+        enum menuBarLog { static func log(_ message: String) {} }
+        func beginPanelPresentationWatch(window: NSWindow, startedAt: TimeInterval,
+                                         showDuration: TimeInterval) {}
         func configurePopoverWindow(_ window: NSWindow) {}
         func animatePopoverOpen(_ window: NSWindow) {}
         @discardableResult func useStablePopoverPositioningViewIfNeeded(_ window: NSWindow) -> Bool { false }
@@ -475,6 +478,16 @@ enum MenuPanelRecoveryTests {
             expect(host.popoverLastFrame == window.frame, "later movement refreshes the recovery frame")
             host.popoverCloseIsAppRequested = true; close(host)
             expect(NotificationCenter.default.observers.isEmpty, "normal close leaves no geometry observer")
+        }
+        do {
+            let host = setup(present: false)
+            // A close that never reported didClose leaves the flag set with
+            // nothing on screen; the next click must not be swallowed by it.
+            host.popoverIsClosing = true
+            host.showPopover(animate: false, activate: false)
+            expect(host.popover.isShown && !host.popoverIsClosing
+                   && host.popover.attempts == 1,
+                   "a close that never finished does not swallow the next open")
         }
         do {
             let host = setup()

@@ -29,6 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     private var popoverLastWindowNumber: Int?
     private var popoverForeignReopenAt = Date.distantPast
     private var popoverIsSwitchingAnchor = false
+    /// Timings for the presentation that just started, so a report of a slow
+    /// panel has numbers to go on instead of a feeling.
+    private var panelPresentation: PanelPresentation?
+    private var panelPresentationSerial = 0
+    private var panelPresentationObservers: [NSObjectProtocol] = []
     /// The app to hand activation back to when the panel is dismissed, so
     /// Vorssaint does not stay in front. Captured when a click opens the panel
     /// and kept current by the observers below while the panel is shown.
@@ -1024,6 +1029,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
                 returnActivation(to: endPanelActivationTracking(), after: interruptedCloseReason)
             }
         }
+        // A close whose `popoverDidClose` never arrived leaves this flag set
+        // with nothing on screen. That is not a close in progress, and keeping
+        // it would swallow every later click on the icon.
+        if popoverIsClosing, !popover.isShown, !popoverIsFadingOut {
+            Self.menuBarLog.log("panel open cleared a close that never finished")
+            popoverIsClosing = false
+        }
         guard !popover.isShown, !popoverIsClosing else { return }
         guard let button = button ?? statusController.button else { return }
 
@@ -1035,7 +1047,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             popover.animates = false
         }
         MenuPanelFocus.shared.setPopoverVisible(true)
+        let showStartedAt = ProcessInfo.processInfo.systemUptime
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        let showDuration = ProcessInfo.processInfo.systemUptime - showStartedAt
         MenuPanelFocus.shared.setPopoverVisible(popover.isShown)
         if !animate {
             popover.animates = true
@@ -1068,6 +1082,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         if let window = popover.contentViewController?.view.window {
             beginPopoverDriftCorrection(window: window,
                                         anchor: savedAnchor ?? resolvePanelAnchor(for: button, window: window))
+            beginPanelPresentationWatch(window: window, startedAt: showStartedAt,
+                                        showDuration: showDuration)
         }
         installPopoverDismissMonitor()
     }
@@ -1078,10 +1094,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         // another app or on the desktop dismisses the panel.
         popoverDismissMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
-        ) { [weak self] _ in
+        ) { [weak self] event in
             guard let self, self.popover.isShown else { return }
             guard !PanelInteractionState.shared.preventsPopoverDismissal else { return }
-            guard self.statusController.containsStatusItem(at: NSEvent.mouseLocation) == false else { return }
+            let point = NSEvent.mouseLocation
+            guard self.statusController.containsStatusItem(at: point) == false else { return }
+            self.logPanelDismissal(source: "outside", event: event, location: point)
             self.closePopover(reason: .outsideClick)
         }
 
@@ -1093,6 +1111,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         ) { [weak self] event in
             guard let self, self.popover.isShown else { return event }
             if self.shouldDismissPopover(forLocalEvent: event) {
+                self.logPanelDismissal(source: "settings-overlap", event: event,
+                                       location: NSEvent.mouseLocation)
                 self.closePopover(reason: .outsideClick)
             }
             return event
@@ -1102,6 +1122,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             guard let self else { return event }
             return self.handlePopoverKeyDown(event)
         }
+    }
+
+    // MARK: - Presentation timings
+
+    /// The shape of one presentation: how long AppKit spent inside `show()`,
+    /// when the window first drew, and how far the content height moved after
+    /// it was up. The height is what AppKit re-lays out the whole panel for,
+    /// so a jump here is what an open feels like when it is not the first one.
+    private struct PanelPresentation {
+        let serial: Int
+        let startedAt: TimeInterval
+        let showDuration: TimeInterval
+        let openingHeight: CGFloat
+        let switchingAnchor: Bool
+        var firstDraw: TimeInterval?
+        var resizes = 0
+        var finalHeight: CGFloat
+    }
+
+    private func beginPanelPresentationWatch(window: NSWindow, startedAt: TimeInterval,
+                                             showDuration: TimeInterval) {
+        endPanelPresentationWatch()
+        panelPresentationSerial &+= 1
+        let serial = panelPresentationSerial
+        panelPresentation = PanelPresentation(
+            serial: serial,
+            startedAt: startedAt,
+            showDuration: showDuration,
+            openingHeight: window.frame.height,
+            switchingAnchor: popoverIsSwitchingAnchor,
+            finalHeight: window.frame.height)
+        for name in [NSWindow.didUpdateNotification, NSWindow.didResizeNotification] {
+            panelPresentationObservers.append(NotificationCenter.default.addObserver(
+                forName: name, object: window, queue: .main
+            ) { [weak self, weak window] notification in
+                guard let self, let window,
+                      var watch = self.panelPresentation, watch.serial == serial else { return }
+                let elapsed = ProcessInfo.processInfo.systemUptime - watch.startedAt
+                if notification.name == NSWindow.didUpdateNotification {
+                    if watch.firstDraw == nil { watch.firstDraw = elapsed }
+                } else {
+                    watch.resizes += 1
+                    watch.finalHeight = window.frame.height
+                }
+                self.panelPresentation = watch
+            })
+        }
+        // Long enough to cover AppKit's own show animation, then logged once.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self, self.panelPresentation?.serial == serial else { return }
+            self.logPanelPresentation()
+        }
+    }
+
+    private func logPanelPresentation() {
+        guard let watch = panelPresentation else { return }
+        let firstDraw = watch.firstDraw.map { Self.milliseconds($0) } ?? "none"
+        Self.menuBarLog.log("panel open show=\(Self.milliseconds(watch.showDuration), privacy: .public) firstDraw=\(firstDraw, privacy: .public) height=\(Int(watch.openingHeight))->\(Int(watch.finalHeight)) resizes=\(watch.resizes) switching=\(watch.switchingAnchor)")
+        endPanelPresentationWatch()
+    }
+
+    private func endPanelPresentationWatch() {
+        panelPresentationObservers.forEach(NotificationCenter.default.removeObserver)
+        panelPresentationObservers.removeAll()
+        panelPresentation = nil
+    }
+
+    private static func milliseconds(_ interval: TimeInterval) -> String {
+        // Log numbers read the same on every machine, whatever the decimal mark.
+        String(format: "%.1fms", locale: Locale(identifier: "en_US_POSIX"), interval * 1000)
     }
 
     private func removePopoverDismissMonitor() {
@@ -1117,6 +1207,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             NSEvent.removeMonitor(monitor)
             popoverKeyboardMonitor = nil
         }
+    }
+
+    /// A click that closes the panel is the one real signal behind a report of
+    /// "it closed as if I had clicked behind it": a point inside the panel's
+    /// own frame means the window was not taking that click. Record where it
+    /// landed, which window received it, and whether the panel was still up.
+    private func logPanelDismissal(source: String, event: NSEvent?, location: NSPoint) {
+        let window = popover.contentViewController?.view.window
+        let frame = window?.frame ?? .zero
+        let inside = window != nil && frame.contains(location)
+        let point = "\(Int(location.x)),\(Int(location.y))"
+        let box = "\(Int(frame.minX)),\(Int(frame.minY)) \(Int(frame.width))x\(Int(frame.height))"
+        Self.menuBarLog.log("panel dismiss \(source, privacy: .public) inside=\(inside) point=\(point, privacy: .public) frame=\(box, privacy: .public) eventWindow=\(event?.windowNumber ?? 0) panelWindow=\(window?.windowNumber ?? 0)")
     }
 
     private func shouldDismissPopover(forLocalEvent event: NSEvent) -> Bool {
