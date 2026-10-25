@@ -484,8 +484,6 @@ enum MenuPanelRecoveryTests {
         }
         do {
             let host = setup(present: false)
-            // A close that never reported didClose leaves the flag set with
-            // nothing on screen; the next click must not be swallowed by it.
             host.popoverIsClosing = true
             host.showPopover(animate: false, activate: false)
             expect(host.popover.isShown && !host.popoverIsClosing

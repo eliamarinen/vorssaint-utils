@@ -29,8 +29,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     private var popoverLastWindowNumber: Int?
     private var popoverForeignReopenAt = Date.distantPast
     private var popoverIsSwitchingAnchor = false
-    /// Timings for the presentation that just started, so a report of a slow
-    /// panel has numbers to go on instead of a feeling.
     private var panelPresentation: PanelPresentation?
     private var panelPresentationSerial = 0
     private var panelPresentationObservers: [NSObjectProtocol] = []
@@ -1029,9 +1027,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
                 returnActivation(to: endPanelActivationTracking(), after: interruptedCloseReason)
             }
         }
-        // A close whose `popoverDidClose` never arrived leaves this flag set
-        // with nothing on screen. That is not a close in progress, and keeping
-        // it would swallow every later click on the icon.
+        // Recover a missing didClose callback so later clicks can open the panel.
         if popoverIsClosing, !popover.isShown, !popoverIsFadingOut {
             Self.menuBarLog.log("panel open cleared a close that never finished")
             popoverIsClosing = false
@@ -1126,8 +1122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
 
     // MARK: - Presentation timings
 
-    /// The shape of one presentation: how long AppKit spent inside `show()`,
-    /// the first observed window update, and subsequent height changes.
     /// Observation starts after `show()` and initial layout; an update is not
     /// a rendering-completion signal, and resizes during `show()` are excluded.
     private struct PanelPresentation {
@@ -1209,10 +1203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         }
     }
 
-    /// A click that closes the panel is the one real signal behind a report of
-    /// "it closed as if I had clicked behind it": a point inside the panel's
-    /// own frame means the window was not taking that click. Record where it
-    /// landed, which window received it, and whether the panel was still up.
+    /// An outside dismissal inside the panel's frame helps diagnose click-through.
     private func logPanelDismissal(source: String, event: NSEvent?, location: NSPoint) {
         let window = popover.contentViewController?.view.window
         let frame = window?.frame ?? .zero
