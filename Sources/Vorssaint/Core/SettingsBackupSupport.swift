@@ -167,6 +167,7 @@ enum SettingsBackupSupport {
         DefaultsKey.notchAgentsOptInMigrated,
         DefaultsKey.settingsWindowWidth,
         DefaultsKey.settingsWindowHeight,
+        DefaultsKey.settingsSidebarWidth,
         DefaultsKey.settingsSearchRecentDestinations,
         DefaultsKey.clipboardHistoryWindowWidth,
         DefaultsKey.clipboardHistoryWindowHeight,

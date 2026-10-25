@@ -1726,7 +1726,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             let window = SettingsWindow(contentViewController: host)
             window.isMouseButtonCaptureActive = { MouseButtonShortcutService.isCaptureActive }
             // .miniaturizable so the Window menu's Minimize (Cmd+M) actually works.
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            // The navigation split view supplies the full-height sidebar and
+            // the native toolbar, including its title and search surface.
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable,
+                                .fullSizeContentView]
+            window.toolbarStyle = .unified
+            window.titleVisibility = .visible
             host.view.widthAnchor.constraint(greaterThanOrEqualToConstant: SettingsWindowSupport.minContentWidth).isActive = true
             host.view.heightAnchor.constraint(greaterThanOrEqualToConstant: SettingsWindowSupport.minContentHeight).isActive = true
             let minFrame = window.frameRect(forContentRect: NSRect(
@@ -1750,7 +1755,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             window.delegate = self
             settingsWindow = window
         }
-        settingsWindow?.title = L10n.shared.s.settingsTitle
         if let window = settingsWindow {
             positionSettingsWindow(window, force: createdWindow, on: targetScreen)
         }

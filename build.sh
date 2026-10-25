@@ -453,8 +453,11 @@ if (( TEST )); then
         Sources/Vorssaint/UI/Settings/SettingsSearchSupport.swift
         Sources/Vorssaint/UI/Settings/SettingsSearchHistory.swift
         Sources/Vorssaint/UI/Settings/SettingsSearchSuggestions.swift
+        Sources/Vorssaint/UI/Settings/SettingsShellLayout.swift
+        Sources/Vorssaint/UI/Settings/SettingsShellViews.swift
         Sources/Vorssaint/UI/Settings/SettingsSidebarSupport.swift
         Sources/Vorssaint/UI/Settings/FeatureVisibilitySupport.swift
+        Sources/Vorssaint/UI/Settings/SettingsPageFraming.swift
         Sources/Vorssaint/UI/Onboarding/WhatsNewSupport.swift
         Sources/Vorssaint/UI/Settings/SettingsWindow.swift
         Sources/Vorssaint/Core/SettingsNavigationStrings.swift

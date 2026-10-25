@@ -27,8 +27,9 @@ enum SettingsFeatureTests {
         // MARK: Settings backup
 
         let backupKeys = SettingsBackupSupport.exportKeys()
-        suite.expect(!backupKeys.contains(DefaultsKey.settingsSearchRecentDestinations),
-               "Settings search history stays local to this Mac")
+        suite.expect(!backupKeys.contains(DefaultsKey.settingsSidebarWidth)
+                && !backupKeys.contains(DefaultsKey.settingsSearchRecentDestinations),
+               "Settings window geometry and search history stay local to this Mac")
         for reserved in [false, true] {
             let backup = SettingsBackupSupport.payload(appVersion: "test") { key in
                 key == DefaultsKey.windowReserveStageManagerSpace ? reserved : nil
