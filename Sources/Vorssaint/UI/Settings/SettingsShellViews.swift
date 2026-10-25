@@ -63,7 +63,8 @@ struct SettingsSidebarWidthRestorer: NSViewRepresentable {
             guard let split = Self.enclosingSplitView(of: view),
                   split.bounds.width > 0,
                   let controller = split.delegate as? NSSplitViewController,
-                  let sidebar = controller.splitViewItems.first else {
+                  let sidebar = controller.splitViewItems.first,
+                  let pane = split.arrangedSubviews.first else {
                 schedule(from: view, width: width)
                 return
             }
@@ -75,7 +76,8 @@ struct SettingsSidebarWidthRestorer: NSViewRepresentable {
             split.layoutSubtreeIfNeeded()
             let target = SettingsShellLayout.clampedSidebarWidth(width)
             split.setPosition(target, ofDividerAt: 0)
-            guard abs(sidebar.viewController.view.frame.width - target) < 1 else {
+            // The controller's content view is inset inside the pane on macOS 26.
+            guard abs(pane.frame.width - target) < 1 else {
                 schedule(from: view, width: width)
                 return
             }
@@ -85,10 +87,9 @@ struct SettingsSidebarWidthRestorer: NSViewRepresentable {
             resizeObserver = NotificationCenter.default.addObserver(
                 forName: NSSplitView.didResizeSubviewsNotification,
                 object: split, queue: .main
-            ) { [weak self, weak sidebar] _ in
-                guard let self, let sidebar, !sidebar.isCollapsed else { return }
-                SettingsShellLayout.storeSidebarWidth(sidebar.viewController.view.frame.width,
-                                                      defaults: self.defaults)
+            ) { [weak self, weak sidebar, weak pane] _ in
+                guard let self, let sidebar, let pane, !sidebar.isCollapsed else { return }
+                SettingsShellLayout.storeSidebarWidth(pane.frame.width, defaults: self.defaults)
             }
         }
 

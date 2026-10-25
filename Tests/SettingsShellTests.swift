@@ -86,7 +86,8 @@ enum SettingsShellTests {
         let split = descendants(host.view).compactMap { $0 as? NSSplitView }.first
         let controller = split?.delegate as? NSSplitViewController
         let sidebar = controller?.splitViewItems.first
-        suite.expect(sidebar?.viewController.view.frame.width == 300,
+        let pane = split?.arrangedSubviews.first
+        suite.expect(pane?.frame.width == 300,
                      "the native split view restores the chosen width after layout settles")
         suite.expect(sidebar?.canCollapse == false && sidebar?.canCollapseFromWindowResize == false,
                      "native navigation disables both divider and resize collapse")
@@ -97,12 +98,12 @@ enum SettingsShellTests {
         suite.expect(descendants(host.view).contains { $0 is NSSearchField },
                      "sidebar search is supplied by native navigation, not a separate text field")
         split?.setPosition(325, ofDividerAt: 0)
-        suite.expect(sidebar?.viewController.view.frame.width == 325,
+        suite.expect(pane?.frame.width == 325,
                      "restoring a width leaves the divider user-resizable")
         suite.expect(SettingsShellLayout.storedSidebarWidth(defaults: defaults) == 325,
                      "a divider drag is saved without a debounce that can be lost at close")
         split?.setPosition(0, ofDividerAt: 0)
-        suite.expect((sidebar?.viewController.view.frame.width ?? 0) >= SettingsShellLayout.sidebarMinWidth,
+        suite.expect((pane?.frame.width ?? 0) >= SettingsShellLayout.sidebarMinWidth,
                      "the native sidebar cannot be dragged closed")
     }
 
