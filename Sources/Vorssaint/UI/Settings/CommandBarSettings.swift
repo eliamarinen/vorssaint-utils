@@ -24,7 +24,7 @@ struct CommandBarSettings: View {
     @State private var ignoreDraft = ""
     @State private var showsFileOptions = false
     @State private var showsLayoutOptions = false
-    @State private var showsAppShortcuts = false
+    @State private var windowReference = CommandBarSettingsWindowReference()
 
     private var text: CommandBarFeatureStrings { FeatureStrings.commandBar(l10n.language) }
     /// The snippet library already says "save", "delete" and "name" in every
@@ -130,7 +130,7 @@ struct CommandBarSettings: View {
 
             Section {
                 Button {
-                    showsAppShortcuts = true
+                    CommandBarAppShortcutsWindowController.shared.show(relativeTo: windowReference.window)
                 } label: {
                     Label(text.appCenterTitle, systemImage: "app.badge")
                 }
@@ -365,10 +365,8 @@ struct CommandBarSettings: View {
         }
         .formStyle(.grouped)
         .settingsFormFrame()
+        .background(CommandBarSettingsWindowReader(reference: windowReference))
         .observesSecureInput()
-        .sheet(isPresented: $showsAppShortcuts) {
-            CommandBarAppShortcutsView()
-        }
         .sheet(item: $editing) { link in
             CommandBarLinkEditor(draft: link, text: text, common: common) { saved in
                 save(saved)
