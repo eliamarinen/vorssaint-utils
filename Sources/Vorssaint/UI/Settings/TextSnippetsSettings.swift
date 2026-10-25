@@ -131,6 +131,7 @@ struct TextSnippetsSettings: View {
             }
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         .observesSecureInput(isActive: enabled || libraryEnabled)
         .sheet(isPresented: $creating) {
             SnippetEditor(text: text,

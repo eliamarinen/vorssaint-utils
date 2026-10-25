@@ -126,8 +126,6 @@ struct CommandBarSettings: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text(text.pageTitle)
             }
 
             Section {
@@ -366,6 +364,7 @@ struct CommandBarSettings: View {
             }
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         .observesSecureInput()
         .sheet(isPresented: $showsAppShortcuts) {
             CommandBarAppShortcutsView()

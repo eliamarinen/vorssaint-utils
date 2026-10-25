@@ -53,13 +53,7 @@ struct MouseSettings: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(l10n.s.tabMouse).font(.title2.bold())
-                    Text(FeatureStrings.settingsPages(l10n.language).mouseDescription)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                SettingsPageDescription(text: FeatureStrings.settingsPages(l10n.language).mouseDescription)
                 if !legendFeatures.isEmpty {
                     legendCard
                 }
@@ -104,9 +98,7 @@ struct MouseSettings: View {
                     }
                 }
             }
-            .frame(maxWidth: 760)
-            .frame(maxWidth: .infinity)
-            .padding(22)
+            .settingsPageFrame()
         }
         .toggleStyle(.switch)
         .onAppear {

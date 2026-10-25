@@ -242,6 +242,7 @@ struct WindowLayoutSettings: View {
             }
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         .onAppear { refreshSystemTilingState() }
         .onReceive(NotificationCenter.default.publisher(
             for: NSApplication.didBecomeActiveNotification)) { _ in

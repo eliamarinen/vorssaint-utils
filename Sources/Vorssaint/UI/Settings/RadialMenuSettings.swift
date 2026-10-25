@@ -186,6 +186,7 @@ struct RadialMenuSettings: View {
             }
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         .onAppear {
             if selectedProfileID == nil || !profiles.contains(where: { $0.id == selectedProfileID }) {
                 selectedProfileID = profiles.first?.id

@@ -40,14 +40,13 @@ struct ScreenCaptureSettings: View {
                     if AppFeature.screenshot.isAvailable || AppFeature.screenRecorder.isAvailable {
                         RecentCapturesShortcutRows()
                     }
-                } header: {
-                    Text(strings.screenCaptureTitle)
                 }
             }
 
             selectedSettings
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         .onAppear { reconcileSelection(withDestination: true) }
         .onChange(of: features.revision) { _, _ in
             reconcileSelection(withDestination: false)

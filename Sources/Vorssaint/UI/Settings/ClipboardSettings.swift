@@ -151,6 +151,7 @@ struct ClipboardSettings: View {
             }
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         .onAppear {
             limit = Defaults.sanitizedClipboardHistoryLimit(limit)
             retentionDays = Defaults.sanitizedClipboardHistoryRetentionDays(retentionDays)

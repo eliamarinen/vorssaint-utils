@@ -192,6 +192,7 @@ struct ShelfSettings: View {
             }
         }
         .formStyle(.grouped)
+        .settingsFormFrame()
         // The island can be switched on or its modules changed elsewhere while this page is open.
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .receive(on: RunLoop.main)) { _ in

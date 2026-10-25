@@ -64,13 +64,7 @@ struct FeatureHubSettings: View {
                 // invalidates its visible range: the page jumps or goes
                 // blank until the next scroll event.
                 VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(hub.pageTitle).font(.title2.bold())
-                        Text(tab == .features ? hub.intro : hub.permissionsIntro)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    SettingsPageDescription(text: tab == .features ? hub.intro : hub.permissionsIntro)
                     Picker(hub.pageTitle, selection: $tab) {
                         Text(hub.tabFeatures).tag(Tab.features)
                         Text(hub.tabPermissions).tag(Tab.permissions)
@@ -107,9 +101,7 @@ struct FeatureHubSettings: View {
                     }
                 }
             }
-            .frame(maxWidth: 760)
-            .frame(maxWidth: .infinity)
-            .padding(22)
+            .settingsPageFrame()
         }
         .alert(confirmingPreset.map { presetName($0) } ?? "",
                isPresented: Binding(get: { confirmingPreset != nil },
