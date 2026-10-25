@@ -451,6 +451,8 @@ if (( TEST )); then
         Sources/Vorssaint/Services/InstalledApps.swift
         Sources/Vorssaint/Services/LaunchAtLoginSupport.swift
         Sources/Vorssaint/UI/Settings/SettingsSearchSupport.swift
+        Sources/Vorssaint/UI/Settings/SettingsSearchHistory.swift
+        Sources/Vorssaint/UI/Settings/SettingsSearchSuggestions.swift
         Sources/Vorssaint/UI/Settings/SettingsSidebarSupport.swift
         Sources/Vorssaint/UI/Settings/FeatureVisibilitySupport.swift
         Sources/Vorssaint/UI/Onboarding/WhatsNewSupport.swift
