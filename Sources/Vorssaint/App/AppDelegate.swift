@@ -560,6 +560,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         MenuPanelFocus.shared.setPopoverVisible(popover.isShown)
         popover.animates = true
+        if popover.isShown, !popoverIsFadingOut {
+            popoverIsClosing = false
+            popoverCloseIsAppRequested = false
+            popoverCloseReason = nil
+        }
         popover.contentViewController?.view.window?.makeKey()
         if let window = popover.contentViewController?.view.window {
             configurePopoverWindow(window)
@@ -933,6 +938,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             }
             return false
         }
+        if !popoverIsFadingOut {
+            popoverIsClosing = false
+            popoverCloseIsAppRequested = false
+            popoverCloseReason = nil
+        }
         configurePopoverWindow(popoverWindow)
         popoverWindow.makeKey()
         beginPopoverDriftCorrection(window: popoverWindow,
@@ -1013,24 +1023,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
                              animate: Bool = true,
                              activate: Bool = true,
                              restoring savedAnchor: PanelAnchor? = nil) {
-        // An interrupted fade continues the same presentation. Keep the
-        // requested metric and activation source through its intermediate close.
-        let reopening = popoverIsFadingOut && popover.isShown
+        // An interrupted or unfinished close continues the same presentation.
+        // Keep the requested metric and activation source through its cleanup.
+        let wasReopening = popoverIsReopening
+        let reopening = wasReopening || (popoverIsFadingOut && popover.isShown)
+            || (popoverIsClosing && !popover.isShown)
         let interruptedCloseReason = popoverCloseReason
         popoverIsReopening = reopening
         finishPopoverFadeOut()
-        popoverIsReopening = false
+        if popoverIsClosing, !popover.isShown, !popoverIsFadingOut {
+            Self.menuBarLog.log("panel open completed a close that never finished")
+            finishPopoverClose(recoverForeignClose: false)
+        }
+        popoverIsReopening = wasReopening
         defer {
-            if reopening, !popover.isShown {
+            if reopening, !wasReopening, !popover.isShown {
                 statusController.setMicBadgeHeld(false)
                 releasePanelResources()
                 returnActivation(to: endPanelActivationTracking(), after: interruptedCloseReason)
             }
-        }
-        // Recover a missing didClose callback so later clicks can open the panel.
-        if popoverIsClosing, !popover.isShown, !popoverIsFadingOut {
-            Self.menuBarLog.log("panel open cleared a close that never finished")
-            popoverIsClosing = false
         }
         guard !popover.isShown, !popoverIsClosing else { return }
         guard let button = button ?? statusController.button else { return }
@@ -1050,7 +1061,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         if !animate {
             popover.animates = true
         }
-        if let window = popover.contentViewController?.view.window {
+        if popover.isShown, let window = popover.contentViewController?.view.window {
             configurePopoverWindow(window)
             window.contentView?.layoutSubtreeIfNeeded()
             window.makeKey()
@@ -1070,9 +1081,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         // — otherwise popoverDidClose never fires and both would leak, holding a
         // display object and a window observer for the rest of the session.
         guard popover.isShown else {
-            statusController.setMicBadgeHeld(false)
-            endPopoverDriftCorrection()
-            if !reopening { endPanelActivationTracking() }
+            if popoverIsClosing {
+                popoverIsReopening = reopening
+                finishPopoverClose(recoverForeignClose: false)
+                popoverIsReopening = wasReopening
+            } else {
+                statusController.setMicBadgeHeld(false)
+                endPopoverDriftCorrection()
+                if !reopening { endPanelActivationTracking() }
+            }
             return
         }
         if let window = popover.contentViewController?.view.window {
@@ -1403,6 +1420,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     }
 
     func popoverDidClose(_ notification: Notification) {
+        // A recovered close can still report back after the next presentation.
+        guard popoverIsClosing, !popover.isShown else { return }
+        finishPopoverClose()
+    }
+
+    private func finishPopoverClose(recoverForeignClose: Bool = true) {
         logPanelPresentation()
         if !popover.isShown {
             MenuPanelFocus.shared.setPopoverVisible(false)
@@ -1410,7 +1433,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         // Decided before anything below is torn down, and treated like a
         // metric anchor switch: the panel is about to be shown again in the
         // same turn, so the sampling and caches it is using stay alive.
-        let recoveryAnchor = anchorAfterForeignClose()
+        let recoveryAnchor = recoverForeignClose ? anchorAfterForeignClose() : nil
         if recoveryAnchor != nil {
             popoverIsSwitchingAnchor = true
             MenuPanelFocus.shared.setSwitchingMetricAnchor(true)
@@ -1429,11 +1452,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         popoverCloseIsAppRequested = false
         let closeReason = popoverCloseReason
         popoverCloseReason = nil
+        // A completion may present another panel or run a nested menu loop.
+        // Finish the old activation tracking before that new work starts.
+        let activationSource = !popoverIsSwitchingAnchor && !popoverIsReopening
+            ? endPanelActivationTracking() : nil
         runPopoverCloseCompletions()
         if let recoveryAnchor {
             reopenPanelAfterForeignClose(anchor: recoveryAnchor)
-        } else if !popoverIsSwitchingAnchor && !popoverIsReopening {
-            returnActivation(to: endPanelActivationTracking(), after: closeReason)
+        } else {
+            returnActivation(to: activationSource, after: closeReason)
         }
     }
 
