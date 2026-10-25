@@ -1231,6 +1231,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         if popoverCloseReason?.dismissesWithoutTakeover != false {
             popoverCloseReason = reason
         }
+        if !animated, popoverIsFadingOut {
+            finishPopoverFadeOut()
+            return
+        }
         guard !popoverIsClosing else { return }
 
         popoverIsClosing = true
@@ -1710,7 +1714,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         let targetScreen = (popover.isShown
             ? popoverAnchor?.screen ?? popover.contentViewController?.view.window?.screen
             : nil) ?? NSScreen.withMouse
-        closePopover()
+        closePopover(animated: false)
         let createdWindow = settingsWindow == nil
         if settingsWindow == nil {
             let host = NSHostingController(rootView: SettingsView())
