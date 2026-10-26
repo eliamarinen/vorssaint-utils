@@ -9,7 +9,38 @@ enum SettingsPageLayout {
     static let margin: CGFloat = 22
 }
 
-/// Context stays in the content; the destination's title belongs to the toolbar.
+/// A compact introduction for a feature, inside a SettingsCard or Form section.
+struct SettingsFeatureIntroduction: View {
+    let title: String
+    let symbol: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: symbol)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 44, height: 44)
+                .background(Color.accentColor.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Text(description)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+/// Context for shared pages that do not describe a single feature.
 struct SettingsPageDescription: View {
     let text: String
 

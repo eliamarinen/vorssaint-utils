@@ -28,6 +28,11 @@ struct TextSnippetsSettings: View {
     var body: some View {
         Form {
             Section {
+                SettingsFeatureIntroduction(title: text.pageTitle,
+                                            symbol: AppFeature.textSnippets.symbolName,
+                                            description: text.hubDescription)
+            }
+            Section {
                 Toggle(text.enable, isOn: $enabled)
                     .onChange(of: enabled) { _, _ in
                         TextSnippetService.shared.syncWithPreferences()

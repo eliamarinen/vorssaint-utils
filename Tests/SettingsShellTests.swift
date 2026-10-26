@@ -47,6 +47,33 @@ enum SettingsShellTests {
                          "search overlay headings exist in \(language.rawValue)")
         }
         checkNativeLayout(suite)
+        checkFeatureIntroduction(suite)
+    }
+
+    private static func checkFeatureIntroduction(_ suite: TestSuite) {
+        func height(title: String, description: String, width: CGFloat) -> CGFloat {
+            let host = NSHostingView(rootView:
+                SettingsFeatureIntroduction(title: title, symbol: "command", description: description)
+                    .frame(width: width))
+            host.layoutSubtreeIfNeeded()
+            return host.fittingSize.height
+        }
+
+        let shortHeight = height(title: "Command Bar", description: "Find and run actions.", width: 344)
+        suite.expect(shortHeight >= 52 && shortHeight.isFinite,
+                     "the introduction accommodates its icon and vertical padding")
+        for language in AppLanguage.allCases {
+            let text = FeatureStrings.commandBar(language)
+            let narrow = height(title: text.pageTitle, description: text.settingsCaption, width: 344)
+            let wide = height(title: text.pageTitle, description: text.settingsCaption, width: 684)
+            suite.expect(narrow.isFinite && narrow >= wide && wide >= 52,
+                         "the introduction wraps without a fixed height in \(language.rawValue)")
+        }
+        let longHeight = height(title: String(repeating: "Long feature name ", count: 6),
+                                description: String(repeating: "An explanation that needs room. ", count: 12),
+                                width: 344)
+        suite.expect(longHeight > shortHeight * 2,
+                     "long feature names and descriptions expand instead of being truncated")
     }
 
     private static func checkNativeLayout(_ suite: TestSuite) {

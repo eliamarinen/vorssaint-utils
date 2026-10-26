@@ -52,7 +52,11 @@ struct SwitcherSettings: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsPageDescription(text: pages.switcherDescription)
+                SettingsCard {
+                    SettingsFeatureIntroduction(title: l10n.s.switcherSection,
+                                                symbol: AppFeature.switcher.symbolName,
+                                                description: pages.switcherDescription)
+                }
                 if AppFeature.switcher.isAvailable {
                     switcherCard
                         .settingsSectionAnchor(.switcher, cornerRadius: 16)

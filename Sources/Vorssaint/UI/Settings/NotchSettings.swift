@@ -146,9 +146,13 @@ struct NotchSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .center) {
-                SettingsPageDescription(text: text.description)
-                Spacer(minLength: 12)
+            SettingsCard {
+                SettingsFeatureIntroduction(title: text.title, symbol: AppFeature.notch.symbolName,
+                                            description: text.description)
+            }
+            HStack {
+                Text(text.enable)
+                Spacer()
                 Toggle(text.enable, isOn: $enabled).labelsHidden().toggleStyle(.switch)
                     .disabled(!AppFeature.notch.isAvailable).accessibilityLabel(text.enable)
             }

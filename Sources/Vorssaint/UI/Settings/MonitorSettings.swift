@@ -45,8 +45,11 @@ struct MonitorSettings: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    SettingsPageDescription(
-                        text: FeatureStrings.settingsPages(l10n.language).monitorDescription)
+                    SettingsCard {
+                        SettingsFeatureIntroduction(title: l10n.s.tabMonitor,
+                                                    symbol: "chart.line.uptrend.xyaxis",
+                                                    description: FeatureStrings.settingsPages(l10n.language).monitorDescription)
+                    }
                     groupHeading(l10n.s.monitorMenuBarSection, symbol: "menubar.rectangle")
                     menuBarCard
                     menuBarStyleCard

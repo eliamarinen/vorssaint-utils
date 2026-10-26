@@ -24,13 +24,14 @@ struct ShelfSettings: View {
     var body: some View {
         Form {
             Section {
+                SettingsFeatureIntroduction(title: l10n.s.shelfName, symbol: AppFeature.shelf.symbolName,
+                                            description: l10n.s.shelfEnableCaption)
+            }
+            Section {
                 Toggle(l10n.s.shelfEnable, isOn: $enabled)
                     .onChange(of: enabled) { _, _ in
                         ShelfService.shared.syncWithPreferences()
                     }
-                Text(l10n.s.shelfEnableCaption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 // Adding the Finder selection asks to control Finder, so the
                 // promise only holds while that option is off.
                 if !(shortcutEnabled && shortcutAddsFinderSelection) {

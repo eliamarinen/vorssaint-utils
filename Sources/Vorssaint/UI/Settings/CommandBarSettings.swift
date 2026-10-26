@@ -43,6 +43,10 @@ struct CommandBarSettings: View {
     var body: some View {
         Form {
             Section {
+                SettingsFeatureIntroduction(title: text.pageTitle, symbol: AppFeature.commandBar.symbolName,
+                                            description: text.settingsCaption)
+            }
+            Section {
                 // One choice, open it or recenter it, so one row. Neither
                 // carries an icon: a ⌘ glyph in front of "Open the bar now"
                 // reads as the shortcut that opens it, which it is not.
@@ -60,7 +64,6 @@ struct CommandBarSettings: View {
                 // about one feature into four cards that looked like settings.
                 VStack(alignment: .leading, spacing: 6) {
                     Text(text.positionCaption)
-                    Text(text.settingsCaption)
                     Label(text.privacyNote, systemImage: "lock.laptopcomputer")
                     HStack(spacing: 6) {
                         Text(text.tryTheseLabel)
